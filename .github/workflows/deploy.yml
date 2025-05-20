@@ -1,0 +1,51 @@
+name: Deploy ML Model Training to EC2
+
+on:
+  push:
+    branches:
+      - main  # Trigger the action when pushing to the `main` branch
+  workflow_dispatch: # Allow manual trigger from GitHub UI
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: SSH to EC2 instance and run training script
+        uses: appleboy/ssh-action@v0.1.1
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Export environment variables on EC2
+            export ALIAS="${{ secrets.ALIAS }}"
+            export MODEL_NAME="${{ secrets.MODEL_NAME }}"
+            export MLFLOW_TRACKING_URI="${{ secrets.MODEL_NAME }}"
+            export DATASET_URI="${{ secrets.DATASET_URI }}"
+            
+            # Clone the GitHub repository if not already cloned
+            if [ ! -d "model-trainer" ]; then
+              git clone https://github.com/MLOpsLab/model-trainer.git
+            fi
+            
+            cd model-trainer
+            
+            # Pull the latest changes
+            git pull origin main
+            
+            # Build the Docker image
+            docker build -t model-trainer .
+            
+            # Stop any running containers (in case there's an older one)
+            docker stop model-trainer || true
+            docker rm model-trainer || true
+            
+            # Run the model training in the container
+            docker run --name model-trainer model-trainer
+            
+            # Optional: Check logs to verify that the model was trained and logged
+            docker logs model-trainer

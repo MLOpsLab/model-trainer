@@ -10,22 +10,22 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 
-
-MLFLOW_TRACKING_URI = "http://mlflow-server:5000"  # Point to your MLflow server
+MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
+ALIAS = os.getenv('ALIAS')
+MODEL_NAME = os.getenv('MODEL_NAME')
+DATASET_URI = os.getenv('DATASET_URI')
 
 app = FastAPI()
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-MODEL_NAME = "diabetes_rf_model"
 
 # 1. Download remote dataset (Pima Indian Diabetes)
 # Directly read from the remote CSV (no storing to disk)
-df = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/diabetes.csv")
+df = pd.read_csv(DATASET_URI)
 
 # The following lines are still required:
 X = df.drop("Outcome", axis=1)
 y = df["Outcome"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-ALIAS = "local"
 
 # 2. Train model and log with MLflow if not already
 runs = mlflow.search_runs(experiment_names=["Default"], filter_string=f'tags.mlflow.runName="{MODEL_NAME}"')

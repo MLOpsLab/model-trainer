@@ -1,15 +1,15 @@
+# Use official Python base image
 FROM python:3.9-slim
 
+# Set the working directory inside the container
 WORKDIR /app
 
-# System dependencies for scikit-learn, pandas, MLflow
-RUN apt-get update && \
-    apt-get install -y build-essential git && \
-    rm -rf /var/lib/apt/lists/*
+# Install necessary dependencies
+COPY requirements.txt /app/requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py /app/model_trainer.py
+# Copy the training code from GitHub repo into the container
+COPY . /app
 
-RUN pip install --no-cache-dir \
-    pandas scikit-learn mlflow
-
-CMD ["python", "model_trainer.py"]
+# Command to run the training script
+CMD ["python", "main.py"]
