@@ -24,7 +24,7 @@ jobs:
             # Export environment variables on EC2
             export ALIAS="${{ secrets.ALIAS }}"
             export MODEL_NAME="${{ secrets.MODEL_NAME }}"
-            export MLFLOW_TRACKING_URI="${{ secrets.MODEL_NAME }}"
+            export MLFLOW_TRACKING_URI="${{ secrets.MLFLOW_TRACKING_URI }}"
             export DATASET_URI="${{ secrets.DATASET_URI }}"
             export ARTIFACT_URI="${{ secrets.ARTIFACT_URI }}"
             
