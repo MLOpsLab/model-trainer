@@ -41,12 +41,12 @@ jobs:
             # Build the Docker image
             docker build -t model-trainer .
             
+            # Create a custom network (if it doesn't exist)
+            docker network create --driver bridge mlops-lab-net || true
+            
             # Stop any running containers (in case there's an older one)
             docker stop model-trainer || true
             docker rm model-trainer || true
             
             # Run the model training in the container
             docker run --name model-trainer model-trainer
-            
-            # Optional: Check logs to verify that the model was trained and logged
-            docker logs model-trainer
