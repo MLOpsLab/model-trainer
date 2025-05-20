@@ -23,7 +23,7 @@ mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 artifact_location = ARTIFACT_URI
 
 # Create a new experiment with the specified artifact location (S3 bucket)
-experiment_id = mlflow.create_experiment("my_experiment", artifact_location=artifact_location)
+experiment_id = mlflow.create_experiment("Defualt", artifact_location=artifact_location)
 
 # Set the experiment to use
 mlflow.set_experiment(experiment_id)
