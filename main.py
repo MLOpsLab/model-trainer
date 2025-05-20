@@ -22,13 +22,6 @@ mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 # Set the artifact location (S3 bucket where artifacts will be stored)
 artifact_location = ARTIFACT_URI
 
-# Create a new experiment with the specified artifact location (S3 bucket)
-experiment_id = mlflow.create_experiment("Defualt", artifact_location=artifact_location)
-
-# Set the experiment to use
-mlflow.set_experiment(experiment_id)
-
-
 # 1. Download remote dataset (Pima Indian Diabetes)
 # Directly read from the remote CSV (no storing to disk)
 df = pd.read_csv(DATASET_URI)
@@ -48,7 +41,7 @@ if runs.shape[0] == 0:
         acc = accuracy_score(y_test, preds)
         mlflow.log_param("n_estimators", 100)
         mlflow.log_metric("accuracy", acc)
-        mlflow.sklearn.log_model(rf, "model", registered_model_name=MODEL_NAME)
+        mlflow.sklearn.log_model(rf, "model", registered_model_name=MODEL_NAME, artifact_path=artifact_location)
     # Get latest version number for the model
     client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
     model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
