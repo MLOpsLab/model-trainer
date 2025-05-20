@@ -26,6 +26,7 @@ jobs:
             export MODEL_NAME="${{ secrets.MODEL_NAME }}"
             export MLFLOW_TRACKING_URI="${{ secrets.MODEL_NAME }}"
             export DATASET_URI="${{ secrets.DATASET_URI }}"
+            export ARTIFACT_URI="${{ secrets.ARTIFACT_URI }}"
             
             # Clone the GitHub repository if not already cloned
             if [ ! -d "model-trainer" ]; then
