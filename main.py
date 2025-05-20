@@ -19,7 +19,11 @@ ARTIFACT_URI = os.getenv('ARTIFACT_URI')
 
 app = FastAPI()
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-mlflow.set_artifact_uri(ARTIFACT_URI)
+# Set the artifact location (S3 bucket where artifacts will be stored)
+artifact_location = ARTIFACT_URI
+
+# Set the experiment with the artifact location
+mlflow.set_experiment("my_experiment", artifact_location=artifact_location)
 
 # 1. Download remote dataset (Pima Indian Diabetes)
 # Directly read from the remote CSV (no storing to disk)
