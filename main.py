@@ -1,7 +1,5 @@
 import pandas as pd
 from fastapi import FastAPI
-from pydantic import BaseModel
-from typing import List
 import uvicorn
 import mlflow
 import mlflow.sklearn
@@ -11,57 +9,91 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import os
 
+# Environment Variables
 MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 ALIAS = os.getenv('ALIAS')
 MODEL_NAME = os.getenv('MODEL_NAME')
 DATASET_URI = os.getenv('DATASET_URI')
-ARTIFACT_URI = os.getenv('ARTIFACT_URI')
+ARTIFACT_URI = os.getenv('ARTIFACT_URI')  # S3 URI for artifacts
 
 # Verify the environment variables
 if not all([MLFLOW_TRACKING_URI, ALIAS, MODEL_NAME, DATASET_URI, ARTIFACT_URI]):
     raise ValueError("One or more required environment variables are missing.")
 
-# Initialize FastAPI and MLflow
-app = FastAPI()
+# Configure MLflow to use S3
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
-artifact_location = ARTIFACT_URI  # This should be your S3 URI or local path
+mlflow.set_experiment("Default")  # Ensure experiment exists
 
-# 1. Download remote dataset (Pima Indian Diabetes)
-try:
-    df = pd.read_csv(DATASET_URI)  # Directly read from the remote CSV
-except Exception as e:
-    raise ValueError(f"Error loading dataset from {DATASET_URI}: {str(e)}")
+# AWS S3 Configuration (if needed)
+# os.environ['AWS_ACCESS_KEY_ID'] = os.getenv('AWS_ACCESS_KEY_ID')
+# os.environ['AWS_SECRET_ACCESS_KEY'] = os.getenv('AWS_SECRET_ACCESS_KEY')
 
-# 2. Prepare data
-X = df.drop("Outcome", axis=1)
-y = df["Outcome"]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+def train_and_log_model():
+    # 1. Download remote dataset (Pima Indian Diabetes)
+    try:
+        df = pd.read_csv(DATASET_URI)
+    except Exception as e:
+        raise ValueError(f"Error loading dataset from {DATASET_URI}: {str(e)}")
 
-# 3. Check if model has already been tracked
-runs = mlflow.search_runs(experiment_names=["Default"], filter_string=f'tags.mlflow.runName="{MODEL_NAME}"')
-if runs.shape[0] == 0:
-    # If model is not already tracked, start a new run
+    # 2. Prepare data
+    X = df.drop("Outcome", axis=1)
+    y = df["Outcome"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+    # 3. Train the model
+    rf = RandomForestClassifier(n_estimators=100, random_state=42)
+    rf.fit(X_train, y_train)
+
+    # 4. Evaluate the model
+    preds = rf.predict(X_test)
+    acc = accuracy_score(y_test, preds)
+
+    # 5. MLflow Logging
     with mlflow.start_run(run_name=MODEL_NAME):
-        rf = RandomForestClassifier(n_estimators=100, random_state=42)
-        rf.fit(X_train, y_train)
-        preds = rf.predict(X_test)
-        acc = accuracy_score(y_test, preds)
+        # Log parameters
+        mlflow.log_params({
+            "n_estimators": 100,
+            "random_state": 42
+        })
 
-        # Log model parameters, metrics, and the model itself
-        mlflow.log_param("n_estimators", 100)
+        # Log metric
         mlflow.log_metric("accuracy", acc)
-        mlflow.sklearn.log_model(rf, "model", registered_model_name=MODEL_NAME)  # Remove artifact_path here
 
-    # Get latest version number for the model
+        # Log model to S3
+        mlflow.sklearn.log_model(
+            sk_model=rf,
+            artifact_path=f"models:/{MODEL_NAME}/dev",  # S3 path for the model
+            registered_model_name=MODEL_NAME
+        )
+
+    # 6. Get and alias the model version
     client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
-    model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
-    latest_version = max(int(mv.version) for mv in model_versions)
 
-    # Assign the alias to the latest version
-    client.set_registered_model_alias(
-        name=MODEL_NAME,
-        alias=ALIAS,
-        version=latest_version
-    )
-else:
-    print(f"Model '{MODEL_NAME}' already tracked in MLflow.")
+    # Find the latest model version
+    model_versions = client.search_model_versions(f"name='{MODEL_NAME}'")
+    if model_versions:
+        latest_version = max(int(mv.version) for mv in model_versions)
+
+        # Set alias for the latest version
+        client.set_registered_model_alias(
+            name=MODEL_NAME,
+            alias=ALIAS,
+            version=latest_version
+        )
+
+        print(f"Model {MODEL_NAME} logged with version {latest_version}")
+
+    return rf, acc
+
+# FastAPI app setup
+app = FastAPI()
+
+@app.on_event("startup")
+def startup_event():
+    try:
+        train_and_log_model()
+    except Exception as e:
+        print(f"Model training failed: {str(e)}")
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
