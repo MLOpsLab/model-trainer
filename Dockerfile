@@ -1,21 +1,17 @@
-# Use official Python base image
-FROM python:3.10-slim
+FROM python:3.10-buster
 
-# Set a working directory inside the container
-WORKDIR /app
+# Install necessary dependencies
+RUN apt-get update && apt-get install -y \
+    libatlas-base-dev \
+    libcurl4-openssl-dev \
+    libssl-dev \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy the current directory contents into the container
-COPY . /app
-
-# Set environment variables to avoid warnings during installation
-ENV PYTHONUNBUFFERED=1
-ENV PIP_NO_CACHE_DIR=off
-
-# Update pip first to avoid errors with older versions
+# Install Python packages
 RUN pip install --upgrade pip
-
-# Install necessary dependencies one by one to debug easily
-RUN pip install --no-cache-dir fastapi uvicorn pandas pydantic mlflow scikit-learn
+RUN pip install fastapi uvicorn pandas pydantic mlflow scikit-learn scipy
 
 # Command to run the training script
 CMD ["python", "main.py"]
