@@ -1,15 +1,8 @@
 # Use official Python base image
 FROM python:3.10-slim
 
-# Set the working directory inside the container
-WORKDIR /app
-
 # Install necessary dependencies
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy the training code from GitHub repo into the container
-COPY . /app
+RUN pip install fastapi uvicorn pandas pydantic mlflow scikit-learn
 
 # Command to run the training script
 CMD ["python", "main.py"]
