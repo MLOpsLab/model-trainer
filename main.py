@@ -22,8 +22,12 @@ mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 # Set the artifact location (S3 bucket where artifacts will be stored)
 artifact_location = ARTIFACT_URI
 
-# Set the experiment with the artifact location
-mlflow.set_experiment("my_experiment", artifact_location=artifact_location)
+# Create a new experiment with the specified artifact location (S3 bucket)
+experiment_id = mlflow.create_experiment("my_experiment", artifact_location=artifact_location)
+
+# Set the experiment to use
+mlflow.set_experiment(experiment_id)
+
 
 # 1. Download remote dataset (Pima Indian Diabetes)
 # Directly read from the remote CSV (no storing to disk)
