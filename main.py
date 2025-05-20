@@ -14,9 +14,11 @@ MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 ALIAS = os.getenv('ALIAS')
 MODEL_NAME = os.getenv('MODEL_NAME')
 DATASET_URI = os.getenv('DATASET_URI')
+ARTIFACT_URI = os.getenv('ARTIFACT_URI')
 
 app = FastAPI()
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+mlflow.set_artifact_uri(ARTIFACT_URI)
 
 # 1. Download remote dataset (Pima Indian Diabetes)
 # Directly read from the remote CSV (no storing to disk)
