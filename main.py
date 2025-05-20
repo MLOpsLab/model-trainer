@@ -9,6 +9,7 @@ from mlflow.tracking import MlflowClient
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+import os
 
 MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 ALIAS = os.getenv('ALIAS')
