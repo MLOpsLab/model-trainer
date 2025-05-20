@@ -21,20 +21,20 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Create a .env file with environment variables (without pushing it to GitHub)
-            echo "ALIAS=${{ secrets.ALIAS }}" > .env
-            echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
-            echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> .env
-            echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
-            echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
-          
-            
+        
             # Clone the GitHub repository if not already cloned
             if [ ! -d "model-trainer" ]; then
               git clone https://github.com/MLOpsLab/model-trainer.git
             fi
             
             cd model-trainer
+            
+            # Create a .env file with environment variables (without pushing it to GitHub)
+            echo "ALIAS=${{ secrets.ALIAS }}" > .env
+            echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
+            echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> .env
+            echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
+            echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
             
             # Pull the latest changes
             git pull origin main
