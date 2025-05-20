@@ -11,7 +11,6 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import os
 
-# Retrieve environment variables
 MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 ALIAS = os.getenv('ALIAS')
 MODEL_NAME = os.getenv('MODEL_NAME')
@@ -51,7 +50,7 @@ if runs.shape[0] == 0:
         # Log model parameters, metrics, and the model itself
         mlflow.log_param("n_estimators", 100)
         mlflow.log_metric("accuracy", acc)
-        mlflow.sklearn.log_model(rf, "model", registered_model_name=MODEL_NAME, artifact_path=artifact_location)
+        mlflow.sklearn.log_model(rf, "model", registered_model_name=MODEL_NAME)  # Remove artifact_path here
 
     # Get latest version number for the model
     client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
