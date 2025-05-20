@@ -21,12 +21,13 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Export environment variables on EC2
-            export ALIAS="${{ secrets.ALIAS }}"
-            export MODEL_NAME="${{ secrets.MODEL_NAME }}"
-            export MLFLOW_TRACKING_URI="${{ secrets.MLFLOW_TRACKING_URI }}"
-            export DATASET_URI="${{ secrets.DATASET_URI }}"
-            export ARTIFACT_URI="${{ secrets.ARTIFACT_URI }}"
+            # Create a .env file with environment variables (without pushing it to GitHub)
+            echo "ALIAS=${{ secrets.ALIAS }}" > .env
+            echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
+            echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> .env
+            echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
+            echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
+          
             
             # Clone the GitHub repository if not already cloned
             if [ ! -d "model-trainer" ]; then
@@ -49,4 +50,4 @@ jobs:
             docker rm model-trainer || true
             
             # Run the model training in the container
-            docker run --name model-trainer model-trainer
+            docker run --name model-trainer run --env-file .env model-trainer
