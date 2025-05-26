@@ -14,6 +14,7 @@ MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 ALIAS = os.getenv('ALIAS')
 MODEL_NAME = os.getenv('MODEL_NAME')
 DATASET_URI = os.getenv('DATASET_URI')
+ARTIFACT_URI = os.getenv('ARTIFACT_URI')
 
 # Verify the environment variables
 if not all([MLFLOW_TRACKING_URI, ALIAS, MODEL_NAME, DATASET_URI, ARTIFACT_URI]):
