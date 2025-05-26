@@ -3,7 +3,7 @@ name: Deploy ML Model Training to EC2
 on:
   push:
     branches:
-      - main  # Trigger the action when pushing to the `main` branch
+      - develop  # Trigger the action when pushing to the `main` branch
   workflow_dispatch: # Allow manual trigger from GitHub UI
 
 jobs:
@@ -34,6 +34,7 @@ jobs:
             echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
             echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> .env
             echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
+            echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
             
             # Pull the latest changes
             git pull origin main
