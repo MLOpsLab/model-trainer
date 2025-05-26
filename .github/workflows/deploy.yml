@@ -36,6 +36,10 @@ jobs:
             echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
             echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
             
+            echo "--- Content of .env file on EC2 ---"
+            cat .env
+            echo "--- End of .env file content ---"
+
             # Pull the latest changes
             git pull origin main
             
