@@ -14,7 +14,6 @@ MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 ALIAS = os.getenv('ALIAS')
 MODEL_NAME = os.getenv('MODEL_NAME')
 DATASET_URI = os.getenv('DATASET_URI')
-ARTIFACT_URI = os.getenv('ARTIFACT_URI')  # S3 URI for artifacts
 
 # Verify the environment variables
 if not all([MLFLOW_TRACKING_URI, ALIAS, MODEL_NAME, DATASET_URI, ARTIFACT_URI]):
@@ -23,10 +22,6 @@ if not all([MLFLOW_TRACKING_URI, ALIAS, MODEL_NAME, DATASET_URI, ARTIFACT_URI]):
 # Configure MLflow to use S3
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment("Default")  # Ensure experiment exists
-
-# AWS S3 Configuration (if needed)
-# os.environ['AWS_ACCESS_KEY_ID'] = os.getenv('AWS_ACCESS_KEY_ID')
-# os.environ['AWS_SECRET_ACCESS_KEY'] = os.getenv('AWS_SECRET_ACCESS_KEY')
 
 def train_and_log_model():
     # 1. Download remote dataset (Pima Indian Diabetes)
