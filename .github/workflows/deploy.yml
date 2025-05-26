@@ -44,7 +44,7 @@ jobs:
             git pull origin main
             
             # Build the Docker image
-            docker build -t model-trainer .
+            docker build --no-cache -t model-trainer .
             
             # Create a custom network (if it doesn't exist)
             docker network create --driver bridge mlops-lab-net || true
