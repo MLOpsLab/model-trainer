@@ -3,8 +3,8 @@ name: Deploy ML Model Training to EC2
 on:
   push:
     branches:
-      - develop  # Trigger the action when pushing to the `main` branch
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+      - develop  # Trigger on develop branch
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -21,34 +21,29 @@ jobs:
           username: ec2-user
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-        
-            # Clone the GitHub repository if not already cloned
+            # Clone or update the repo
             if [ ! -d "model-trainer" ]; then
               git clone https://github.com/MLOpsLab/model-trainer.git
             fi
-            
+
             cd model-trainer
-            
-            # Create a .env file with environment variables (without pushing it to GitHub)
+            git fetch origin
+            git checkout develop
+            git pull origin develop
+
+            # Create .env file with secrets
             echo "ALIAS=${{ secrets.ALIAS }}" > .env
             echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
             echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> .env
             echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
             echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
 
-            # Pull the latest changes
-            git pull origin main
-            
-            # Build the Docker image
-            docker build -t model-trainer .
-            
-            # Create a custom network (if it doesn't exist)
+            echo "=== .env contents ==="
+            cat .env
+
+            # Build and run Docker container
+            docker build --no-cache -t model-trainer .
             docker network create --driver bridge mlops-lab-net || true
-            
-            # Stop any running containers (in case there's an older one)
             docker stop model-trainer || true
             docker rm model-trainer || true
-            
-            # Run the model training in the container
-            docker run --name model-trainer --env-file .env model-trainer env
-
+            docker run --name model-trainer --env-file .env model-trainer
