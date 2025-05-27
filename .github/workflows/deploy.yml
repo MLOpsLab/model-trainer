@@ -50,4 +50,5 @@ jobs:
             docker rm model-trainer || true
             
             # Run the model training in the container
-            docker run --name model-trainer --env-file .env model-trainer
+            docker run --name model-trainer --env-file .env model-trainer env
+
