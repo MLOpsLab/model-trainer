@@ -35,16 +35,12 @@ jobs:
             echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> .env
             echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
             echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
-            
-            echo "--- Content of .env file on EC2 ---"
-            cat .env
-            echo "--- End of .env file content ---"
 
             # Pull the latest changes
             git pull origin main
             
             # Build the Docker image
-            docker build --no-cache -t model-trainer .
+            docker build -t model-trainer .
             
             # Create a custom network (if it doesn't exist)
             docker network create --driver bridge mlops-lab-net || true
