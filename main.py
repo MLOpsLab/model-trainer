@@ -51,7 +51,7 @@ def train_and_log_model():
             artifact_path="model",
             registered_model_name=MODEL_NAME
         )
-
+"""
     client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
     versions = client.search_model_versions(f"name='{MODEL_NAME}'")
     if versions:
@@ -62,6 +62,6 @@ def train_and_log_model():
             version=latest_version
         )
         print(f"Model version {latest_version} registered with alias '{ALIAS}'")
-
+"""
 if __name__ == "__main__":
     train_and_log_model()
