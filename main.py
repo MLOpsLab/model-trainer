@@ -13,14 +13,40 @@ MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
 ALIAS = os.getenv('ALIAS')
 MODEL_NAME = os.getenv('MODEL_NAME')
 DATASET_URI = os.getenv('DATASET_URI')
-ARTIFACT_URI = os.getenv('ARTIFACT_URI')  # This should be s3://your-bucket/path/
+ARTIFACT_URI = os.getenv('ARTIFACT_URI')  # s3://bucket/path/
 
 print("Environment Variables:")
 print("MLFLOW_TRACKING_URI:", MLFLOW_TRACKING_URI)
-print("ARTIFACT_URI (S3):", ARTIFACT_URI)
+print("ARTIFACT_URI:", ARTIFACT_URI)
 print("MODEL_NAME:", MODEL_NAME)
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+
+# Create a NEW experiment with S3 artifact location
+experiment_name = f"S3_Experiment_{MODEL_NAME}"
+
+try:
+    # Delete experiment if it exists (for testing)
+    try:
+        existing = mlflow.get_experiment_by_name(experiment_name)
+        if existing and existing.lifecycle_stage != "deleted":
+            client = MlflowClient()
+            client.delete_experiment(existing.experiment_id)
+            print(f"Deleted existing experiment")
+    except:
+        pass
+
+    # Create fresh experiment with S3 artifact store
+    experiment_id = mlflow.create_experiment(
+        name=experiment_name,
+        artifact_location=ARTIFACT_URI
+    )
+    print(f"✅ Created experiment with S3 artifacts: {ARTIFACT_URI}")
+
+except Exception as e:
+    print(f"Using existing experiment: {e}")
+
+mlflow.set_experiment(experiment_name)
 
 def train_and_log_model():
     df = pd.read_csv(DATASET_URI)
@@ -38,26 +64,33 @@ def train_and_log_model():
     signature = infer_signature(X_train, preds)
     input_example = X_train.iloc[:5]
 
-    # Set experiment with existing one (don't create new)
-    mlflow.set_experiment("Default")
-
     with mlflow.start_run(run_name=MODEL_NAME):
+        # Check where artifacts will go
+        current_run = mlflow.active_run()
+        print(f"🏃 Run artifacts will go to: {current_run.info.artifact_uri}")
+
         mlflow.log_params({
             "n_estimators": 100,
             "random_state": 42
         })
         mlflow.log_metric("accuracy", acc)
 
-        # Log model directly to S3 by specifying the full S3 path
+        # Use simple artifact_path (not full S3 URL)
         model_info = mlflow.sklearn.log_model(
             sk_model=model,
-            artifact_path=ARTIFACT_URI + f"models/{MODEL_NAME}",  # Direct S3 path
+            artifact_path="model",  # Simple path, not S3 URL
             registered_model_name=MODEL_NAME,
             signature=signature,
             input_example=input_example
         )
 
-        print(f"✅ Model saved directly to S3: {ARTIFACT_URI}models/{MODEL_NAME}")
+        print(f"✅ Model logged to: {model_info.model_uri}")
+
+        # Verify it's in S3
+        if "s3://" in model_info.model_uri:
+            print(f"🎉 SUCCESS! Model is in S3: {model_info.model_uri}")
+        else:
+            print(f"❌ Model not in S3: {model_info.model_uri}")
 
 if __name__ == "__main__":
     train_and_log_model()
