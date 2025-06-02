@@ -27,22 +27,8 @@ if not all([MLFLOW_TRACKING_URI, ALIAS, MODEL_NAME, DATASET_URI, ARTIFACT_URI]):
 
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-# Create experiment with S3 artifact location
-experiment_name = f"S3_Models_{MODEL_NAME}"
-
-try:
-    experiment_id = mlflow.create_experiment(
-        name=experiment_name,
-        artifact_location=ARTIFACT_URI  # This sets S3 as the artifact store
-    )
-    print(f"✅ Created experiment with S3 artifact store: {ARTIFACT_URI}")
-except mlflow.exceptions.MlflowException as e:
-    if "already exists" in str(e):
-        print(f"⚠️ Experiment already exists, using it")
-    else:
-        raise e
-
-mlflow.set_experiment(experiment_name)
+# Use the Default experiment with S3 override
+mlflow.set_experiment("Default")
 
 def train_and_log_model():
     df = pd.read_csv(DATASET_URI)
@@ -61,46 +47,22 @@ def train_and_log_model():
     input_example = X_train.iloc[:5]
 
     with mlflow.start_run(run_name=MODEL_NAME):
-        # Verify where artifacts will go
-        current_run = mlflow.active_run()
-        print(f"🏃 Run ID: {current_run.info.run_id}")
-        print(f"📦 Artifacts will be stored at: {current_run.info.artifact_uri}")
-
         mlflow.log_params({
             "n_estimators": 100,
             "random_state": 42
         })
         mlflow.log_metric("accuracy", acc)
 
-        # CRITICAL: Use simple relative path, NOT S3 URL
-        model_info = mlflow.sklearn.log_model(
+        # ONLY use simple string - NO S3 paths here!
+        mlflow.sklearn.log_model(
             sk_model=model,
-            artifact_path="model",  # ✅ Simple path - NOT S3 URL!
+            artifact_path="model",  # ← ONLY this simple string
             registered_model_name=MODEL_NAME,
             signature=signature,
             input_example=input_example
         )
 
-        print(f"✅ Model logged to: {model_info.model_uri}")
-
-        # Check if it actually went to S3
-        if model_info.model_uri.startswith('s3://'):
-            print(f"🎉 SUCCESS! Model is in S3!")
-            print(f"📍 S3 Location: {model_info.model_uri}")
-        else:
-            print(f"❌ Model NOT in S3: {model_info.model_uri}")
-
-    # Optional: Set alias for registered model
-    client = MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
-    versions = client.search_model_versions(f"name='{MODEL_NAME}'")
-    if versions:
-        latest_version = max(int(v.version) for v in versions)
-        client.set_registered_model_alias(
-            name=MODEL_NAME,
-            alias=ALIAS,
-            version=latest_version
-        )
-        print(f"🏷️ Model version {latest_version} registered with alias '{ALIAS}'")
+        print("✅ Model logged successfully!")
 
 if __name__ == "__main__":
     train_and_log_model()
