@@ -1,29 +1,54 @@
-import boto3
-import joblib
 import os
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
 import pandas as pd
+import mlflow
+import mlflow.sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
 
-# S3 configuration
-S3_BUCKET = os.getenv('ARTIFACT_URI')
-MODEL_PATH = os.getenv('MODEL_PATH', 'models/random_forest.joblib')
+# MLflow tracking server URI
+MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI', 'http://localhost:5000')
+MODEL_NAME = os.getenv('MODEL_NAME', 'diabetes-model')
 DATASET_URI = os.getenv('DATASET_URI')
+EXPERIMENT_NAME = os.getenv('EXPERIMENT_NAME', 'diabetes-classification')
 
-# Train model
+# Set MLflow tracking URI
+mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
+
+# Create or get experiment
+mlflow.set_experiment(EXPERIMENT_NAME)
+
+# Load and prepare data
 df = pd.read_csv(DATASET_URI)
 X = df.drop("Outcome", axis=1)
 y = df["Outcome"]
 X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
+# Train model
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X_train, y_train)
 
-# Save model locally first
-local_path = '/tmp/model.joblib'
-joblib.dump(model, local_path)
+# Evaluate model
+y_pred = model.predict(X_test)
+accuracy = accuracy_score(y_test, y_pred)
 
-# Upload to S3
-s3_client = boto3.client('s3')
-s3_client.upload_file(local_path, S3_BUCKET, MODEL_PATH)
-print(f"✅ Model successfully trained and uploaded to s3://{S3_BUCKET}/{MODEL_PATH}")
+# Log model with MLflow
+with mlflow.start_run(run_name=f"{MODEL_NAME}-run"):
+    # Log parameters
+    mlflow.log_param("n_estimators", 100)
+    mlflow.log_param("random_state", 42)
+
+    # Log metrics
+    mlflow.log_metric("accuracy", accuracy)
+
+    # Log model
+    mlflow.sklearn.log_model(
+        sk_model=model,
+        artifact_path="model",
+        registered_model_name=MODEL_NAME
+    )
+
+    # Get the run ID for reference
+    run_id = mlflow.active_run().info.run_id
+    print(f"✅ Model {MODEL_NAME} logged to MLflow (Run ID: {run_id})")
+    print(f"🔍 View at: {MLFLOW_TRACKING_URI}/#/experiments/{mlflow.get_experiment_by_name(EXPERIMENT_NAME).experiment_id}/runs/{run_id}")
