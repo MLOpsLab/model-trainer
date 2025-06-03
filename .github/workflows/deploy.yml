@@ -36,7 +36,7 @@ jobs:
             echo "MODEL_NAME=${{ secrets.MODEL_NAME }}" >> .env
             echo "MLFLOW_TRACKING_URI=${{ secrets.MLFLOW_TRACKING_URI }}" >> .env
             echo "DATASET_URI=${{ secrets.DATASET_URI }}" >> .env
-            echo "ARTIFACT_URI=${{ secrets.ARTIFACT_URI }}" >> .env
+            echo "ARTIFACT_URI=${{ secrets.S3_BUCKET }}" >> .env
 
             echo "=== .env contents ==="
             cat .env
