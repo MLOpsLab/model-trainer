@@ -5,6 +5,7 @@ import mlflow.sklearn
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
+from mlflow.models.signature import infer_signature  # Add this import
 
 # MLflow tracking server URI
 MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI', 'http://localhost:5000')
@@ -32,6 +33,10 @@ model.fit(X_train, y_train)
 y_pred = model.predict(X_test)
 accuracy = accuracy_score(y_test, y_pred)
 
+# Create model signature and input example
+signature = infer_signature(X_train, y_pred)  # Create signature from input and output
+input_example = X_train.iloc[:5].to_dict(orient="split")  # Create input example
+
 # Log model with MLflow
 with mlflow.start_run(run_name=f"{MODEL_NAME}-run"):
     # Log parameters
@@ -41,11 +46,13 @@ with mlflow.start_run(run_name=f"{MODEL_NAME}-run"):
     # Log metrics
     mlflow.log_metric("accuracy", accuracy)
 
-    # Log model
+    # Log model with signature and input example
     mlflow.sklearn.log_model(
         sk_model=model,
         artifact_path="model",
-        registered_model_name=MODEL_NAME
+        registered_model_name=MODEL_NAME,
+        signature=signature,           # Add this
+        input_example=X_train.iloc[:5] # Add this
     )
 
     # Get the run ID for reference
