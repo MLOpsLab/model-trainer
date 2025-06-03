@@ -62,24 +62,35 @@ with mlflow.start_run(run_name=f"{MODEL_NAME}-training"):
     mlflow.log_metric("recall", recall)
     mlflow.log_metric("f1_score", f1)
 
-    # Log feature importance
-    feature_importance = pd.DataFrame({
-        'feature': X.columns,
-        'importance': model.feature_importances_
-    }).sort_values('importance', ascending=False)
+    # Create model signature and input example
+    print("Creating model signature...")
+    from mlflow.models.signature import infer_signature
 
-    # Log the model to MLflow
-    print("Logging model to MLflow...")
+    # Get predictions for signature
+    signature_predictions = model.predict(X_train.iloc[:5])
+
+    # Create signature from input and output
+    signature = infer_signature(
+        X_train.iloc[:5],  # Input sample
+        signature_predictions  # Output sample
+    )
+
+    # Create input example
+    input_example = X_train.iloc[:5].to_dict(orient="split")
+
+    # Log the model to MLflow with signature and example
+    print("Logging model to MLflow with signature and input example...")
     mlflow.sklearn.log_model(
         sk_model=model,
         artifact_path="model",
-        registered_model_name=MODEL_NAME
+        registered_model_name=MODEL_NAME,
+        signature=signature,  # Add signature
+        input_example=X_train.iloc[:5]  # Add input example
     )
 
     # Get the run ID
     run_id = mlflow.active_run().info.run_id
     print(f"MLflow run ID: {run_id}")
-
 # Step 4: Also save model to S3 directly (optional, since MLflow already saves artifacts)
 print("Saving model locally...")
 local_path = '/tmp/model.joblib'
