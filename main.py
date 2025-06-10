@@ -15,7 +15,7 @@ S3_BUCKET = os.getenv('S3_BUCKET')
 S3_KEY = os.getenv('S3_KEY', 'models/diabetes_model.joblib')
 DATASET_URI = os.getenv('DATASET_URI')
 MLFLOW_TRACKING_URI = os.getenv('MLFLOW_TRACKING_URI')
-EXPERIMENT_NAME = os.getenv('EXPERIMENT_NAME', 'diabetes-classification')
+EXPERIMENT_NAME = os.getenv('EXPERIMENT_NAME', 'diabetes-experiment')
 MODEL_NAME = os.getenv('MODEL_NAME', 'diabetes-rf-model')
 
 print("\n=== MLflow Training (v2.22.0) ===\n")
