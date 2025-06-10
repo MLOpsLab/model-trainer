@@ -6,6 +6,7 @@ import boto3
 import mlflow
 import mlflow.sklearn
 import traceback
+import time
 from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
@@ -39,22 +40,43 @@ print(f"- Model name: {MODEL_NAME}")
 print(f"\nConfiguring MLflow...")
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 
-# Step 2: Set experiment (using SDK directly)
+# Step 2: Set experiment with robust handling
 print(f"Setting experiment: {EXPERIMENT_NAME}")
+experiment_id = None
 try:
     # Get or create experiment
     experiment = mlflow.get_experiment_by_name(EXPERIMENT_NAME)
+
     if experiment is None:
+        # Experiment doesn't exist, create it
         experiment_id = mlflow.create_experiment(EXPERIMENT_NAME)
-        print(f"Created new experiment with ID: {experiment_id}")
+        print(f"Created new experiment '{EXPERIMENT_NAME}' with ID: {experiment_id}")
+    elif experiment.lifecycle_stage == "deleted":
+        # Experiment exists but is deleted, create a new one with a different name
+        new_name = f"{EXPERIMENT_NAME}-{int(time.time())}"
+        experiment_id = mlflow.create_experiment(new_name)
+        EXPERIMENT_NAME = new_name
+        print(f"Original experiment was deleted. Created new experiment '{EXPERIMENT_NAME}' with ID: {experiment_id}")
     else:
-        print(f"Using existing experiment with ID: {experiment.experiment_id}")
+        # Experiment exists and is active
+        experiment_id = experiment.experiment_id
+        print(f"Using existing experiment '{EXPERIMENT_NAME}' with ID: {experiment_id}")
 
     # Set as active experiment
     mlflow.set_experiment(EXPERIMENT_NAME)
+    print(f"Successfully set active experiment to '{EXPERIMENT_NAME}'")
 except Exception as e:
     print(f"Warning: Issue with experiment setup: {e}")
-    print("Continuing with default experiment")
+    # Create a unique experiment name based on timestamp
+    unique_name = f"experiment-{int(time.time())}"
+    try:
+        experiment_id = mlflow.create_experiment(unique_name)
+        EXPERIMENT_NAME = unique_name
+        mlflow.set_experiment(EXPERIMENT_NAME)
+        print(f"Created fallback experiment '{EXPERIMENT_NAME}' with ID: {experiment_id}")
+    except Exception as e2:
+        print(f"Failed to create fallback experiment: {e2}")
+        print("Continuing with default experiment")
 
 # Step 3: Load and prepare data
 print(f"\nLoading dataset from: {DATASET_URI}")
@@ -71,6 +93,7 @@ except Exception as e:
 
 # Step 4: Train model and track with MLflow
 print(f"\nStarting MLflow run...")
+run_id = None
 try:
     with mlflow.start_run(run_name=f"{MODEL_NAME}-training") as run:
         run_id = run.info.run_id
@@ -121,8 +144,6 @@ try:
                 input_example=X_train.iloc[:5]
             )
             print(f"✅ Model '{MODEL_NAME}' successfully logged to MLflow")
-
-            # We skip the verification part since it uses the REST API
         except Exception as e:
             print(f"⚠️ Warning: Issue with model logging: {e}")
             print("Continuing with S3 upload only")
@@ -156,21 +177,30 @@ print(f"✅ Model saved to S3: s3://{S3_BUCKET}/{S3_KEY}")
 
 try:
     # Try to get experiment ID for URLs (but don't fail if it doesn't work)
-    experiment = mlflow.get_experiment_by_name(EXPERIMENT_NAME)
-    experiment_id = experiment.experiment_id if experiment else "0"
+    if experiment_id is None:
+        experiment = mlflow.get_experiment_by_name(EXPERIMENT_NAME)
+        experiment_id = experiment.experiment_id if experiment else "0"
 
     print("\n=== MLflow Access Information ===")
     print(f"MLflow Server: {MLFLOW_TRACKING_URI}")
-    print(f"Run ID: {run_id}")
+    print(f"Experiment: {EXPERIMENT_NAME}")
+    print(f"Experiment ID: {experiment_id}")
+    if run_id:
+        print(f"Run ID: {run_id}")
     print(f"Model Name: {MODEL_NAME}")
 
     print("\n=== How to Access in MLflow UI ===")
-    print("1. To view experiment and run:")
-    print(f"   {MLFLOW_TRACKING_URI}/#/experiments/{experiment_id}/runs/{run_id}")
+    if run_id:
+        print("1. To view experiment and run:")
+        print(f"   {MLFLOW_TRACKING_URI}/#/experiments/{experiment_id}/runs/{run_id}")
     print("2. To view model in registry:")
     print(f"   {MLFLOW_TRACKING_URI}/#/models/{MODEL_NAME}")
+
+    print("\n=== MLflow Model URI for Serving ===")
+    if run_id:
+        print(f"Run URI: runs:/{run_id}/model")
+    print(f"Registry URI: models:/{MODEL_NAME}/latest")
 except Exception as e:
-    print("\nCould not generate MLflow UI links")
+    print(f"\nCould not generate MLflow UI links: {e}")
 
 print("\n=== Training Complete ===")
-
